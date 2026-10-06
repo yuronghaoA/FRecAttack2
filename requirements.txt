@@ -1,0 +1,12 @@
+dgl-cu111==0.6.1
+pandas
+copy
+pickle
+random
+joblib
+warnings
+numpy==1.24.3
+cupy==11.6.0
+scikit-learn
+scikit-learn-extra
+collections
