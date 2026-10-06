@@ -268,69 +268,6 @@ python results_analysis.py
 > [!IMPORTANT]
 > Please note that the optimal hyperparameters may vary across different datasets or models.
 
-## ⚙️ Arguments
-
-All arguments are defined in [`parse.py`](parse.py). The Symbol column gives the corresponding notation in the paper.
-
-<details open>
-<summary><b>General</b></summary>
-<br>
-
-| Argument | Default | Description |
-|:---|:---|:---|
-| `--select_model` | `FedNCF` | `FedNCF`, `FedMLP`, `FedGNN`, `FedSoG` |
-| `--data` | `ML_1M` | `ML_1M`, `Steam`, `filmtrust`, `lastfm` |
-| `--lr` | `0.005` | Learning rate |
-| `--epoch` | `5000` | Number of training rounds |
-| `--frac` | `0.1` | Fraction of users selected in each round |
-| `--embedding_dim` | `16` | Dimension of user and item embeddings |
-| `--seed` | `608` | Random seed |
-| `--show_mode` | `write` | `print` to the terminal or `write` to the `results` directory |
-
-</details>
-
-<details open>
-<summary><b>Attack</b></summary>
-<br>
-
-| Argument | Symbol | Default | Description |
-|:---|:---:|:---|:---|
-| `--mali_ratio` | | `0.0` | Ratio of malicious users |
-| `--attack_user` | | `NoAttack` | `NoAttack`, `IndSH`, `ColSH`, `Noisy_Col` |
-| `--Noisy_pat` | | `ColDP` | `IndDP` or `ColDP`, used with `Noisy_Col` |
-| `--attack_item` | | `RatingOfChange` | Interaction sampling method |
-| `--sample_size` | *n* | `50` | Number of virtual users |
-| `--alpha` | γ | `0.1` | Proportion of items selected as hard positive (negative) samples |
-| `--sigma` | σ² | `0.1` | Variance of the normal distribution in virtual user sampling |
-| `--window_size` | *w* | `2` | Window size for velocity calculation |
-
-</details>
-
-<details open>
-<summary><b>Defence</b></summary>
-<br>
-
-| Argument | Symbol | Default | Description |
-|:---|:---:|:---|:---|
-| `--is_detect` | | `1` | `1` deploys GuardCQ, `0` does not |
-| `--start_detect` | | `1` | Round in which detection starts |
-| `--wind_sz` | *w′* | `50` | Number of recent rounds used to compute users' contributions |
-
-</details>
-
-<details open>
-<summary><b>FedSoG and FedGNN</b></summary>
-<br>
-
-| Argument | Default | Description |
-|:---|:---|:---|
-| `--clip` | `0.1` | Clipping threshold before adding Laplace noise |
-| `--laplace_lambda` | `0.1` | Scale of the Laplace noise |
-| `--loss` | `mae` | Loss function |
-| `--weight_decay` | `0.001` | Weight decay |
-| `--head_num` | `1` | Number of attention heads in GAT |
-
-</details>
 
 ## 📝 Citation
 
