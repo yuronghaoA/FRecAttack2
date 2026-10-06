@@ -48,12 +48,16 @@ FR models are classified into two types according to how users' privacy is prote
 
 According to the type of FR and whether malicious users collude, four attack scenarios are considered:
 
+<div align="center">
+
 | Attack type | Independent attack | Secret-hiding FR | DP-based FR |
 |:---:|:---:|:---:|:---:|
 | **IndSH** | ✅ | ✅ | |
 | **ColSH** | ❌ | ✅ | |
 | **IndDP** | ✅ | | ✅ |
 | **ColDP** | ❌ | | ✅ |
+
+</div>
 
 ## 🧠 Method
 
@@ -72,12 +76,16 @@ flowchart LR
 
 ### 🔵 Virtual user sampling
 
+<div align="center">
+
 | Scenario | Sampling method |
 |:---:|:---|
 | **IndSH** | Draw *n* samples from a normal distribution centred at the malicious user's own embedding, with variance σ². |
 | **ColSH** | Malicious users share their embeddings through the attacker, cluster them with *k*-means, and sample from a normal distribution for each cluster. The number of samples is proportional to the cluster size. |
 | **IndDP** | Cluster the noisy user embeddings shared in the DP-based system and sample from a normal distribution for each cluster. |
 | **ColDP** | Cluster the noisy user embeddings, assign each malicious user to the closest cluster centre, and re-calculate the distribution of each cluster with the malicious users' true embeddings. |
+
+</div>
 
 ### 🔴 Interaction sampling
 
@@ -109,6 +117,8 @@ All results below are taken from the paper, with 10% malicious users. Values are
 
 ### Attack performance with no defences
 
+<div align="center">
+
 | Dataset | Model | No Attack | FedAttack | FRecAttack²-Ind | FRecAttack²-Col |
 |:---|:---|:---:|:---:|:---:|:---:|
 | ML-1M | FedNCF | 0.0850 | 0.0824 (3.06%) | 0.0780 (8.24%) | **0.0753 (11.41%)** |
@@ -122,7 +132,11 @@ All results below are taken from the paper, with 10% malicious users. Values are
 
 <sub>FRecAttack²-Ind denotes IndSH on ML-1M and Steam, and IndDP on Lastfm and Filmtrust. FRecAttack²-Col is defined similarly. Results of the other baselines (SignFlip, LabelFlip, Gaussian, LIE, ClusterAttack) and NDCG@10 are given in Table 3 of the paper.</sub>
 
+</div>
+
 ### Defence performance of GuardCQ on Filmtrust
+
+<div align="center">
 
 | Attack | NoDefense | GuardCQ | GuardCQ + N.B. | GuardCQ + T.M. |
 |:---|:---:|:---:|:---:|:---:|
@@ -131,6 +145,8 @@ All results below are taken from the paper, with 10% malicious users. Values are
 | FRecAttack²-ColDP | 0.3638 | 0.4581 | 0.4875 | **0.4949** |
 
 <sub>N.B.: NormBound, T.M.: Trimmed-mean.</sub>
+
+</div>
 
 ### Malicious user proportion and mainstream defences
 
@@ -170,12 +186,16 @@ conda install -c rapidsai -c numba -c nvidia -c conda-forge cudf=23.04 cuml=23.0
 
 ML-1M and Steam are used for secret-hiding models, and Lastfm and Filmtrust are used for DP-based models.
 
+<div align="center">
+
 | Dataset | #Users | #Items | #Ratings | #Social Connection | Location |
 |:---|:---:|:---:|:---:|:---:|:---|
 | ML-1M | 6,040 | 3,706 | 1,000,209 | – | `Data/ML_1M/` |
 | Steam | 3,753 | 5,134 | 114,713 | – | `Data/Steam/` |
 | Lastfm | 1,892 | 17,632 | 92,834 | 5,676 | not included |
 | Filmtrust | 874 | 1,957 | 18,662 | 1,853 | `Data/filmtrust.pkl` |
+
+</div>
 
 ## 🚀 Getting Started
 
@@ -231,6 +251,8 @@ Iteration 4, loss = 0.68851, HR@10 = 0.00350, nDCG@10 = 0.00140
 
 The attack scenarios are selected with the following arguments. See `run_attack.sh` and `run_defense.sh` for complete commands.
 
+<div align="center">
+
 | Scenario | Model | Arguments |
 |:---|:---|:---|
 | No attack | Any | `--mali_ratio 0.0 --attack_user NoAttack` |
@@ -240,6 +262,8 @@ The attack scenarios are selected with the following arguments. See `run_attack.
 | ColDP | FedSoG, FedGNN | `--attack_user Noisy_Col --Noisy_pat ColDP` |
 | Without GuardCQ | Any | `--is_detect 0` |
 | With GuardCQ | Any | `--is_detect 1 --start_detect <round>` |
+
+</div>
 
 ## 🔬 Run Experiment
 
@@ -267,7 +291,6 @@ python results_analysis.py
 
 > [!IMPORTANT]
 > Please note that the optimal hyperparameters may vary across different datasets or models.
-
 
 ## 📝 Citation
 
