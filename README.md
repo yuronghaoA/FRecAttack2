@@ -188,12 +188,12 @@ ML-1M and Steam are used for secret-hiding models, and Lastfm and Filmtrust are 
 
 <div align="center">
 
-| Dataset | #Users | #Items | #Ratings | #Social Connection | Location |
-|:---|:---:|:---:|:---:|:---:|:---|
-| ML-1M | 6,040 | 3,706 | 1,000,209 | – | `Data/ML_1M/` |
-| Steam | 3,753 | 5,134 | 114,713 | – | `Data/Steam/` |
-| Lastfm | 1,892 | 17,632 | 92,834 | 5,676 | not included |
-| Filmtrust | 874 | 1,957 | 18,662 | 1,853 | `Data/filmtrust.pkl` |
+| Dataset | #Users | #Items | #Ratings | #Social Connection |
+|:---|:---:|:---:|:---:|:---:|
+| ML-1M | 6,040 | 3,706 | 1,000,209 | – |
+| Steam | 3,753 | 5,134 | 114,713 | – |
+| Lastfm | 1,892 | 17,632 | 92,834 | 5,676 |
+| Filmtrust | 874 | 1,957 | 18,662 | 1,853 |
 
 </div>
 
