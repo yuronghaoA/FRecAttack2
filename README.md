@@ -1,370 +1,346 @@
 <div align="center">
 
-# FRecAttack² & GuardCQ
+<h1>Not One Less</h1>
 
-### Not One Less: Exploring Interplay between User Profiles and Items in Untargeted Attacks against Federated Recommendation
+<h3>Exploring Interplay between User Profiles and Items in<br>Untargeted Attacks against Federated Recommendation</h3>
 
-**Yurong Hao, Xihui Chen, Xiaoting Lyu, Jiqiang Liu, Yongsheng Zhu, Zhiguo Wan, Sjouke Mauw, Wei Wang**
+Yurong Hao · Xihui Chen · Xiaoting Lyu · Jiqiang Liu · Yongsheng Zhu · Zhiguo Wan · Sjouke Mauw · Wei Wang
 
-*ACM SIGSAC Conference on Computer and Communications Security (CCS 2024)*
+*ACM Conference on Computer and Communications Security (CCS) 2024*
 
-[![Paper](https://img.shields.io/badge/Paper-ACM%20DL-blue)](https://doi.org/10.1145/3658644.3670365)
-[![Conference](https://img.shields.io/badge/CCS-2024-8A2BE2)](https://www.sigsac.org/ccs/CCS2024/)
-[![Artifacts Available](https://img.shields.io/badge/ACM%20Artifacts-Available-2E8B57)](https://doi.org/10.1145/3658644.3670365)
-[![Artifacts Functional](https://img.shields.io/badge/ACM%20Artifacts-Functional-DC143C)](https://doi.org/10.1145/3658644.3670365)
-<br>
-[![Python](https://img.shields.io/badge/Python-3.8-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-1.12.0-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![CUDA](https://img.shields.io/badge/CUDA-11.6-76B900?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
+[![Paper](https://img.shields.io/badge/Paper-ACM%20DL-0055A4?style=flat-square)](https://doi.org/10.1145/3658644.3670365)
+[![Artifacts Available](https://img.shields.io/badge/ACM%20Artifacts-Available-2E8B57?style=flat-square)](https://doi.org/10.1145/3658644.3670365)
+[![Artifacts Functional](https://img.shields.io/badge/ACM%20Artifacts-Functional-DC143C?style=flat-square)](https://doi.org/10.1145/3658644.3670365)
+[![Python](https://img.shields.io/badge/Python-3.8-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-1.12.0-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org/)
 
-[Overview](#-overview) •
-[Method](#-method) •
-[Results](#-results) •
-[Installation](#%EF%B8%8F-installation) •
-[Quick Start](#-quick-start) •
-[Reproduce](#-reproducing-the-experiments) •
-[Citation](#-citation)
+[**Overview**](#-overview) ·
+[**Method**](#-method) ·
+[**Results**](#-results) ·
+[**Preparation**](#%EF%B8%8F-preparation) ·
+[**Getting Started**](#-getting-started) ·
+[**Run Experiment**](#-run-experiment) ·
+[**Citation**](#-citation)
 
 </div>
 
----
+<br>
 
-This repository is the official implementation of **FRecAttack²**, an untargeted poisoning attack against federated recommendation (FR), and **GuardCQ**, a defence that detects malicious users by quantifying their contributions. Both are presented in our CCS 2024 paper.
-
-## 🔥 Highlights
-
-- **A general framework for untargeted attacks on FR.** It covers both *secret-hiding* FR (user embeddings never leave the device) and *DP-based* FR (noisy user embeddings are shared), and identifies the **interplay between user profiles and items** as the key factor behind attack performance.
-- **FRecAttack²**, built on two components: **virtual user sampling** to approximate the distribution of benign users, with or without collusion among malicious users, and **velocity-based interaction sampling** to find the items that disrupt the right user–item interplay early in training.
-- **Stronger and stealthier.** FRecAttack² outperforms existing untargeted attacks by up to **27.56%** and remains effective under mainstream Byzantine-robust defences.
-- **GuardCQ**, a defence that reduces the damage of FRecAttack²-ColDP on Filmtrust from **27.56% to 8.78%**, and to **3.29%** when combined with NormBound.
+This project contains the source codes of the proposed approach and experiments for the paper *Not One Less: Exploring Interplay between User Profiles and Items in Untargeted Attacks against Federated Recommendation*, accepted by ACM CCS 2024. It includes the untargeted attack **FRecAttack²** and the defence **GuardCQ**.
 
 ## 📖 Overview
 
-In FR, an aggregator coordinates training while users keep their interaction data locally. Depending on how user profiles are protected, FR systems fall into two families:
+Federated recommendation (FR) trains personalised recommender systems without collecting users' data, but it remains vulnerable to poisoning attacks. This work focuses on **untargeted poisoning attacks**, which degrade the overall performance of the recommender service. The paper proposes a general framework to formalise untargeted attacks against FR and identifies the vital role played by the **interplay between items and user profiles** in determining FR's performance.
+
+> [!NOTE]
+> **Main contributions**
+> - **A general framework** that formalises untargeted attacks against both *secret-hiding* and *DP-based* FR models.
+> - **FRecAttack²**, an untargeted attack that exploits the interplay between user profiles and items through two building blocks: *virtual user sampling* and *interaction sampling*. It outperforms existing methods by up to **27.56%** and evades mainstream defences.
+> - **GuardCQ**, a defence that detects malicious users by quantifying their contributions to the right interplay between items and user profiles.
+
+FR models are classified into two types according to how users' privacy is protected. In **secret-hiding** models, user embeddings are kept locally on each client. In **DP-based** models, all model parameters, including user embeddings, are shared after being perturbed with noise satisfying differential privacy.
 
 <p align="center">
-  <img src="assets/fig1_privacy.png" width="70%" alt="User privacy protection in FR">
+  <img src="assets/fig1_privacy.png" width="640" alt="User privacy protection in FR">
   <br>
-  <em>User privacy protection in FR. Top: secret-hiding models only share item embeddings and model parameters. Bottom: DP-based models share all parameters, perturbed with noise.</em>
+  <sub><b>Figure 1.</b> User privacy protection in FR.</sub>
 </p>
 
-Existing untargeted attacks (e.g., FedAttack, ClusterAttack) mainly manipulate item embeddings based on the malicious users' own profiles. This ignores the fact that what determines recommendation quality is how items interact with the profiles of **general** users. FRecAttack² targets exactly this interplay.
+According to the type of FR and whether malicious users collude, four attack scenarios are considered:
 
-We consider four attack scenarios, depending on the FR type and whether malicious users can collude through the attacker:
-
-| Scenario | Colluding? | Victim FR type | Victim models in this repo |
-|---|:---:|---|---|
-| **IndSH** | ✗ | Secret-hiding | FedNCF, FedMLP |
-| **ColSH** | ✓ | Secret-hiding | FedNCF, FedMLP |
-| **IndDP** | ✗ | DP-based | FedGNN, FedSoG |
-| **ColDP** | ✓ | DP-based | FedGNN, FedSoG |
+| Attack type | Independent attack | Secret-hiding FR | DP-based FR |
+|:---:|:---:|:---:|:---:|
+| **IndSH** | ✅ | ✅ | |
+| **ColSH** | ❌ | ✅ | |
+| **IndDP** | ✅ | | ✅ |
+| **ColDP** | ❌ | | ✅ |
 
 ## 🧠 Method
 
-In every round, each malicious user runs the following pipeline before uploading its poisoned update:
+In each round, a malicious user receives the parameters from the aggregator, samples a set of virtual users to approximate the distribution of benign users, samples the hardest positive and negative interactions for these virtual users, and uploads the gradients computed from the manipulated interactions.
 
 ```mermaid
 flowchart LR
-    A["📥 Receive global<br/>parameters"] --> B["👥 Virtual user<br/>sampling"]
-    B --> C["🎯 Interaction<br/>sampling"]
-    C --> D["⚙️ Optimise attack loss<br/>(flipped labels)"]
-    D --> E["📤 Upload poisoned<br/>gradients"]
+    A["Receive parameters<br/>from aggregator"] --> B["Virtual user<br/>sampling"]
+    B --> C["Interaction<br/>sampling"]
+    C --> D["Compute poisoned<br/>gradients"]
+    D --> E["Upload gradients<br/>to aggregator"]
 
-    B -.- B1["IndSH: Gaussian around own profile<br/>ColSH: cluster colluders' profiles<br/>IndDP: cluster noisy shared profiles<br/>ColDP: re-estimate noisy clusters<br/>with colluders' true profiles"]
-    C -.- C1["Early rounds: score change velocity<br/>Later rounds: absolute scores<br/>(automatic switch)"]
+    style B fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    style C fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
 ```
 
-### 1. Virtual user sampling
+### 🔵 Virtual user sampling
 
-Instead of treating the malicious users themselves as representatives of all users, each malicious user samples a set of **virtual user embeddings** that approximate the distribution of benign users. In the independent scenarios, samples are drawn around the malicious user's own profile (IndSH) or from clusters of the noisy shared profiles (IndDP). With collusion, malicious users share their true embeddings through the attacker, cluster them with *k*-means, and draw samples from each cluster in proportion to its size (ColSH, ColDP).
+| Scenario | Sampling method |
+|:---:|:---|
+| **IndSH** | Draw *n* samples from a normal distribution centred at the malicious user's own embedding, with variance σ². |
+| **ColSH** | Malicious users share their embeddings through the attacker, cluster them with *k*-means, and sample from a normal distribution for each cluster. The number of samples is proportional to the cluster size. |
+| **IndDP** | Cluster the noisy user embeddings shared in the DP-based system and sample from a normal distribution for each cluster. |
+| **ColDP** | Cluster the noisy user embeddings, assign each malicious user to the closest cluster centre, and re-calculate the distribution of each cluster with the malicious users' true embeddings. |
 
-### 2. Velocity-based interaction sampling
+### 🔴 Interaction sampling
 
-For the sampled users, the attack looks for the hardest positive and negative items and flips their labels. We found that ranking items by their **absolute recommendation scores**, as done in prior work, is only accurate in the late stage of training. Ranking them by the **velocity** at which their scores change is much more accurate early on:
-
-<p align="center">
-  <img src="assets/fig2_velocity.png" width="55%" alt="Hard item sampling with ratings vs. velocities">
-  <br>
-  <em>Prediction accuracy of hard items using recommendation ratings (blue) vs. their change velocities (red).</em>
-</p>
-
-FRecAttack² therefore starts with velocity-based sampling and automatically switches to rating-based sampling once the velocity-based predictions stop stabilising across consecutive rounds.
-
-### 3. GuardCQ defence
-
-GuardCQ tracks, over a sliding window of rounds, how consistent each user's rating behaviour on **popular items** is with the global model. Popular items are inferred in three ways: by absolute scores, by score velocities, and by interaction frequency. Benign users become increasingly consistent as training goes on, while malicious users drift the other way:
+Existing attacks select hard samples based only on absolute recommendation scores. As shown in Figure 2, this is accurate in the late stage of training but performs poorly in the early stage. Selecting hard samples by the **change velocity** of recommendation scores gives much higher accuracy in the early stage, but its accuracy drops in the late stage.
 
 <p align="center">
-  <img src="assets/fig6_guardcq.png" width="65%" alt="Rating consistency of benign vs. malicious users">
+  <img src="assets/fig2_velocity.png" width="520" alt="Hard item sampling with recommendation ratings and their change velocities">
   <br>
-  <em>Consistency of rating behaviour on popular items for benign (blue) and malicious (red) users.</em>
+  <sub><b>Figure 2.</b> Hard item sampling with recommendation ratings (blue) and their change velocities (red).</sub>
 </p>
 
-In each round, GuardCQ sorts users by their contribution scores and uses the largest gap to separate them. A user is flagged as malicious only if all three popular-item views agree. GuardCQ needs no extra information beyond what the FR system already collects, and it can be combined with existing Byzantine-robust aggregators.
+FRecAttack² therefore combines the two measurements. It starts with velocity-based sampling and switches to rating-based sampling when the hard items shared between consecutive rounds increase in less than half of the last *M* rounds.
+
+### 🛡️ GuardCQ defence
+
+GuardCQ defines the "right interplay" as rating behaviours consistent with the global model on popular items. Popular items are inferred in three ways: by absolute scores, by velocity, and by counting the interactions reported by users. As training progresses, the consistency of benign users approaches 1.0 while that of malicious users approaches zero.
+
+<p align="center">
+  <img src="assets/fig6_guardcq.png" width="640" alt="Rating behaviour of benign users and malicious users">
+  <br>
+  <sub><b>Figure 3.</b> Rating behaviour of benign users and malicious users in different rounds of model training.</sub>
+</p>
+
+In each round, GuardCQ sorts users' contributions and takes the maximum gap between adjacent values as the threshold. A user is labelled as malicious only when identified as such under all three popular item sets. GuardCQ can also be combined with existing Byzantine-robust FL methods.
 
 ## 📊 Results
 
-**Degradation of HR@10 with 10% malicious users and no defence** (higher = stronger attack). The baseline column shows the best of SignFlip, LabelFlip, FedAttack, Gaussian, LIE and ClusterAttack.
+All results below are taken from the paper, with 10% malicious users. Values are HR@10, and the degrading ratio relative to No Attack is shown in parentheses.
 
-| Dataset | Model | Best baseline | FRecAttack² (Ind) | FRecAttack² (Col) |
-|---|---|:---:|:---:|:---:|
-| ML-1M | FedNCF | 4.24% | 8.24% | **11.41%** |
-| ML-1M | FedMLP | 4.18% | 5.37% | **10.98%** |
-| Steam | FedNCF | 5.20% | 8.78% | **12.77%** |
-| Steam | FedMLP | 2.80% | 3.08% | **14.25%** |
-| Lastfm | FedSoG | 19.10% | 23.26% | **26.39%** |
-| Lastfm | FedGNN | 11.91% | 21.27% | **25.11%** |
-| Filmtrust | FedSoG | 19.11% | 25.45% | **27.56%** |
-| Filmtrust | FedGNN | 17.05% | 26.18% | **26.27%** |
+### Attack performance with no defences
 
-**GuardCQ on Filmtrust (FedSoG, HR@10).**
+| Dataset | Model | No Attack | FedAttack | FRecAttack²-Ind | FRecAttack²-Col |
+|:---|:---|:---:|:---:|:---:|:---:|
+| ML-1M | FedNCF | 0.0850 | 0.0824 (3.06%) | 0.0780 (8.24%) | **0.0753 (11.41%)** |
+| ML-1M | FedMLP | 0.0838 | 0.0803 (4.18%) | 0.0793 (5.37%) | **0.0746 (10.98%)** |
+| Steam | FedNCF | 0.1903 | 0.1853 (2.63%) | 0.1736 (8.78%) | **0.1660 (12.77%)** |
+| Steam | FedMLP | 0.1783 | 0.1738 (2.52%) | 0.1728 (3.08%) | **0.1529 (14.25%)** |
+| Lastfm | FedSoG | 0.0288 | 0.0233 (19.10%) | 0.0221 (23.26%) | **0.0212 (26.39%)** |
+| Lastfm | FedGNN | 0.0235 | 0.0207 (11.91%) | 0.0185 (21.27%) | **0.0176 (25.11%)** |
+| Filmtrust | FedSoG | 0.5022 | 0.4066 (19.11%) | 0.3744 (25.45%) | **0.3638 (27.56%)** |
+| Filmtrust | FedGNN | 0.5276 | 0.4376 (17.05%) | 0.3895 (26.18%) | **0.3890 (26.27%)** |
 
-| Attack | No defence | GuardCQ | GuardCQ + NormBound |
-|---|:---:|:---:|:---:|
-| No attack | 0.5022 | 0.4987 | – |
-| FRecAttack²-IndDP | 0.3744 | 0.4706 | 0.4865 |
-| FRecAttack²-ColDP | 0.3638 | 0.4581 | 0.4875 |
+<sub>FRecAttack²-Ind denotes IndSH on ML-1M and Steam, and IndDP on Lastfm and Filmtrust. FRecAttack²-Col is defined similarly. Results of the other baselines (SignFlip, LabelFlip, Gaussian, LIE, ClusterAttack) and NDCG@10 are given in Table 3 of the paper.</sub>
 
-<details>
-<summary>📈 More figures (click to expand)</summary>
+### Defence performance of GuardCQ on Filmtrust
 
-<br>
+| Attack | NoDefense | GuardCQ | GuardCQ + N.B. | GuardCQ + T.M. |
+|:---|:---:|:---:|:---:|:---:|
+| NoAttack | 0.5022 | 0.4987 | – | – |
+| FRecAttack²-IndDP | 0.3744 | 0.4706 | 0.4865 | **0.4952** |
+| FRecAttack²-ColDP | 0.3638 | 0.4581 | 0.4875 | **0.4949** |
 
-**Impact of the proportion of malicious users (5%, 10%, 15%).** Lighter colours mean stronger attacks.
+<sub>N.B.: NormBound, T.M.: Trimmed-mean.</sub>
 
-<p align="center"><img src="assets/fig3_mali_ratio.png" width="70%" alt="Attack performance with different proportions of malicious users"></p>
+### Malicious user proportion and mainstream defences
 
-**FRecAttack² under mainstream defences** (N.D.: no defence, T.M.: Trimmed-mean, Kr.: Krum, M.Kr.: Multi-Krum, Med.: Median, N.B.: NormBound).
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="assets/fig3_mali_ratio.png" alt="Attack performance with different proportions of malicious users"></td>
+    <td align="center" width="50%"><img src="assets/fig4_defences.png" alt="Attack performance under mainstream defences"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Figure 4.</b> Attack performance with 5%, 10% and 15% malicious users. A lighter colour indicates a better degrading performance.<br>NA: No Attack, SF: SignFlip, LF: LabelFlip, FA: FedAttack, Gaus: Gaussian, CA: ClusterAttack.</sub></td>
+    <td align="center"><sub><b>Figure 5.</b> Attack performance under mainstream defences.<br>N.D.: no defence, T.M.: Trimmed-mean, Kr.: Krum, M.Kr.: Multi-krum, Med.: Median, N.B.: NormBound.</sub></td>
+  </tr>
+</table>
 
-<p align="center"><img src="assets/fig4_defences.png" width="70%" alt="Attack performance under mainstream defences"></p>
+## 🛠️ Preparation
 
-**PCA of model gradients (FedNCF on ML-1M).** Malicious gradients are hidden among benign ones, which is why gradient-based detection struggles.
+### Virtual Environment Creation
 
-<p align="center"><img src="assets/fig5_pca.png" width="70%" alt="PCA visualisation of gradients"></p>
+The project is coded with Python 3.8 and PyTorch 1.12.0. The following shell commands are used to create the virtual environment with **Anaconda**.
 
-</details>
-
-See the [paper](https://doi.org/10.1145/3658644.3670365) for full results, including NDCG@10 and the ablation study.
-
-## 🛠️ Installation
-
-The code is tested with **Python 3.8**, **PyTorch 1.12.0** and **CUDA 11.6** on Ubuntu. The experiments in the paper were run on NVIDIA RTX 4090 GPUs.
-
-**1. Create the conda environment** (about 3–5 minutes)
-
-```bash
-conda create -n FR python=3.8 -y
+```shell
+conda create -n FR python=3.8
 conda activate FR
-conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.6 -c pytorch
+conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.6 -c pytorch   # 3–5 minutes
 ```
 
-**2. Install dependencies** (about 25 minutes)
+### Package and Library Installation
 
-```bash
-pip install -r requirements.txt
+The following commands are used to install the required packages and libraries in the virtual environment **FR** to accelerate the speed of data processing and analysis.
+
+```shell
+pip install -r requirements.txt                                                                  # ~25 minutes
+conda install -c rapidsai -c numba -c nvidia -c conda-forge cudf=23.04 cuml=23.04               # ~40 minutes
 ```
 
-**3. Install RAPIDS cuDF / cuML** for GPU-accelerated clustering (about 40 minutes)
+### Datasets
 
-```bash
-conda install -c rapidsai -c numba -c nvidia -c conda-forge cudf=23.04 cuml=23.04
-```
+ML-1M and Steam are used for secret-hiding models, and Lastfm and Filmtrust are used for DP-based models.
 
-## 📦 Datasets
+| Dataset | #Users | #Items | #Ratings | #Social Connection | Location |
+|:---|:---:|:---:|:---:|:---:|:---|
+| ML-1M | 6,040 | 3,706 | 1,000,209 | – | `Data/ML_1M/` |
+| Steam | 3,753 | 5,134 | 114,713 | – | `Data/Steam/` |
+| Lastfm | 1,892 | 17,632 | 92,834 | 5,676 | not included |
+| Filmtrust | 874 | 1,957 | 18,662 | 1,853 | `Data/filmtrust.pkl` |
 
-| Dataset | Domain | #Users | #Items | #Ratings | Used for | In repo |
-|---|---|---:|---:|---:|---|:---:|
-| [MovieLens-1M](https://grouplens.org/datasets/movielens/1m/) | Movies | 6,040 | 3,706 | 1,000,209 | Secret-hiding | ✅ `Data/ML_1M/` |
-| Steam-200K | Games | 3,753 | 5,134 | 114,713 | Secret-hiding | ✅ `Data/Steam/` |
-| Filmtrust | Movies + social | 874 | 1,957 | 18,662 | DP-based | ✅ `Data/filmtrust.pkl` |
-| Lastfm | Music + social | 1,892 | 17,632 | 92,834 | DP-based | ❌ |
+## 🚀 Getting Started
 
-> The DP-based models (FedGNN, FedSoG) also use the social connections in Filmtrust and Lastfm. Lastfm is not bundled with this repository.
-
-## 🚀 Quick Start
-
-Run **FRecAttack²-ColSH** against **FedNCF** on **ML-1M** with 10% malicious users and print logs to the terminal:
-
-```bash
-python main.py \
-    --select_model FedNCF --data ML_1M \
-    --lr 0.005 --epoch 2500 \
-    --mali_ratio 0.1 --attack_user ColSH --attack_item RatingOfChange \
-    --sample_size 100 --alpha 0.1 \
-    --agg avg --is_detect 0 --show_mode print
-```
-
-<details>
-<summary>📋 Expected output (click to expand)</summary>
+### File Tree
 
 ```text
-Arguments: show_mode=print,select_model=FedNCF,data=ML_1M,device=cuda,layers=[64, 32, 16, 8],batch_size=16,embedding_dim=16,lr=0.005,epoch=2500,frac=0.1,num_neg=1,seed=608,top_k=[10,20],agg=avg,valid_step=1,mali_ratio=0.1,attack_user=ColSH,Noisy_pat=ColDP,attack_item=RatingOfChange,sample_size=100,alpha=0.1,sigma=0.1,window_size=2,is_detect=0,start_detect=1,wind_sz=50,clip=0.1,laplace_lambda=0.1,loss=mae,weight_decay=0.001,head_num=1
+FRecAttack2/
+├── Data/                 # datasets used in the experiment
+├── dataloader.py         # responsible for loading data
+├── main.py               # the main script
+├── server.py             # the operations performed by the aggregator
+├── client.py             # the local operations performed by benign users
+├── attack.py             # the local operations performed by malicious users
+├── col_server.py         # the operations performed by malicious users when they collude
+├── defense.py            # the operations performed by the aggregator when deploying GuardCQ
+├── model.py              # the base recommender models: FedNCF, FedMLP, FedSoG, FedGNN
+├── GAT.py                # sub-modules of FedSoG and FedGNN
+├── filename_gen.py       # generates filenames for experiment results
+├── parse.py              # lists the parameters used in the codes
+├── utils.py              # experimental metrics, e.g., HR and NDCG
+├── run_attack.sh         # shell commands for the attack experiments
+├── run_defense.sh        # shell commands for the defence experiments
+└── results_analysis.py   # generates the experimental results
+```
+
+### Example
+
+Here is an example command to run the attack with Col-SH on the MovieLens (ML-1M) dataset with FedNCF:
+
+```shell
+python main.py --select_model FedNCF --data ML_1M --lr 0.005 --epoch 2500 --mali_ratio 0.1 \
+    --attack_user ColSH --attack_item RatingOfChange --sample_size 100 --alpha 0.1 \
+    --agg avg --show_mode print &
+```
+
+<details>
+<summary>The output similar to the following will be shown in the terminal (click to expand).</summary>
+
+```text
+Arguments: show_mode=print,select_model=FedNCF,data=ML_1M,device=cuda,layers=[64, 32, 16, 8],batch_size=16,embedding_dim=16,lr=0.005,epoch=2500,frac=0.1,num_neg=1,seed=608,top_k=[10,20],agg=avg,valid_step=1,mali_ratio=0.1,attack_user=ColSH,Noisy_pat=ColDP,attack_item=RatingOfChange,sample_size=100,alpha=0.1,sigma=0.1,window_size=2,is_detect=1,start_detect=1,wind_sz=50,clip=0.1,laplace_lambda=0.1,loss=mae,weight_decay=0.001,head_num=1
 Using backend: pytorch
 Iteration 0, loss = 0.68924, HR@10 = 0.00258, nDCG@10 = 0.00102
 Iteration 1, loss = 0.69012, HR@10 = 0.00276, nDCG@10 = 0.00108
 Iteration 2, loss = 0.68959, HR@10 = 0.00331, nDCG@10 = 0.00122
+Iteration 3, loss = 0.68903, HR@10 = 0.00368, nDCG@10 = 0.00140
+Iteration 4, loss = 0.68851, HR@10 = 0.00350, nDCG@10 = 0.00140
 ...
 ```
 
 </details>
 
-**How to select each scenario:**
+### Attack Scenarios
 
-| Scenario | Model | Flags |
-|---|---|---|
-| No attack | any | `--mali_ratio 0.0 --attack_user NoAttack` |
-| IndSH | FedNCF / FedMLP | `--attack_user IndSH` |
-| ColSH | FedNCF / FedMLP | `--attack_user ColSH` |
-| IndDP | FedSoG / FedGNN | `--attack_user Noisy_Col --Noisy_pat IndDP` |
-| ColDP | FedSoG / FedGNN | `--attack_user Noisy_Col --Noisy_pat ColDP` |
-| + GuardCQ | any | `--is_detect 1 --start_detect 50` |
+The attack scenarios are selected with the following arguments. See `run_attack.sh` and `run_defense.sh` for complete commands.
 
-For example, FRecAttack²-ColDP against FedSoG on Filmtrust with GuardCQ enabled:
+| Scenario | Model | Arguments |
+|:---|:---|:---|
+| No attack | Any | `--mali_ratio 0.0 --attack_user NoAttack` |
+| IndSH | FedNCF, FedMLP | `--attack_user IndSH` |
+| ColSH | FedNCF, FedMLP | `--attack_user ColSH` |
+| IndDP | FedSoG, FedGNN | `--attack_user Noisy_Col --Noisy_pat IndDP` |
+| ColDP | FedSoG, FedGNN | `--attack_user Noisy_Col --Noisy_pat ColDP` |
+| Without GuardCQ | Any | `--is_detect 0` |
+| With GuardCQ | Any | `--is_detect 1 --start_detect <round>` |
 
-```bash
-python main.py --select_model FedSoG --data filmtrust --lr 0.1 --epoch 1455 \
-    --mali_ratio 0.1 --attack_user Noisy_Col --Noisy_pat ColDP --attack_item RatingOfChange \
-    --sample_size 50 --alpha 0.1 --window_size 2 \
-    --agg avg --is_detect 1 --start_detect 100 --show_mode print
-```
+## 🔬 Run Experiment
 
-## 🔬 Reproducing the Experiments
+If you wish to obtain comprehensive results and analysis for our attacks and defence, run:
 
-```mermaid
-flowchart LR
-    A["run_attack.sh<br/>(no defence)"] --> R[("results/{model}/{dataset}/*.txt")]
-    B["run_defense.sh<br/>(with GuardCQ)"] --> R
-    R --> C["results_analysis.py"]
-    C --> T["📊 HR@10 / nDCG@10<br/>+ degrading ratio vs. NoAttack"]
-```
-
-**Step 1. Attacks without defence**
-
-```bash
+```shell
 CUDA_VISIBLE_DEVICES=0 nohup bash run_attack.sh &
-```
-
-**Step 2. Attacks with GuardCQ**
-
-```bash
 CUDA_VISIBLE_DEVICES=0 nohup bash run_defense.sh &
 ```
 
-> 💡 With multiple GPUs, set a different `CUDA_VISIBLE_DEVICES` for each script to run them in parallel.
-
-Logs are saved to `results/{model}/{dataset}/` with the following naming scheme:
+Once started, it will automatically create a directory called `results` and other sub-directories according to the command line. The files storing the results are named in a unified format:
 
 ```text
-{attack}-mr{malicious ratio}-{agg | GuardCQ_agg}-seed{seed}.txt
-# e.g.  ColSH-mr0.1-avg-seed608.txt
-#       ColSH-mr0.1-GuardCQ_avg-seed608.txt
+{attack method}-{the ratio of malicious user}-{defense method}-{random seed}.txt
 ```
 
-**Step 3. Summarise the results**
+Running `results_analysis.py` will provide you with the main results related to both the attack and defence:
 
-```bash
+```shell
 python results_analysis.py
 ```
 
-For every result directory, the script averages HR@10 and nDCG@10 over the final rounds and reports the **degrading ratio** relative to the `NoAttack` run, i.e. $(\delta - \delta_{atk}) / \delta$. Without defence, a higher ratio means a stronger attack. With GuardCQ, a lower ratio means a more effective defence.
+> [!TIP]
+> If there are multiple GPUs available, you can modify `CUDA_VISIBLE_DEVICES=0` (e.g., `CUDA_VISIBLE_DEVICES=1`) to reduce the running time.
 
-> ⚠️ Optimal hyperparameters vary across datasets and models. See `run_attack.sh` and `run_defense.sh` for the settings used in the paper. The paper reports the average over 5 runs.
+> [!IMPORTANT]
+> Please note that the optimal hyperparameters may vary across different datasets or models.
 
 ## ⚙️ Arguments
 
-All arguments are defined in [`parse.py`](parse.py). The *Symbol* column links each argument to the notation in the paper.
+All arguments are defined in [`parse.py`](parse.py). The Symbol column gives the corresponding notation in the paper.
 
 <details open>
 <summary><b>General</b></summary>
+<br>
 
 | Argument | Default | Description |
-|---|---|---|
-| `--select_model` | `FedNCF` | `FedNCF`, `FedMLP` (secret-hiding) or `FedGNN`, `FedSoG` (DP-based) |
+|:---|:---|:---|
+| `--select_model` | `FedNCF` | `FedNCF`, `FedMLP`, `FedGNN`, `FedSoG` |
 | `--data` | `ML_1M` | `ML_1M`, `Steam`, `filmtrust`, `lastfm` |
 | `--lr` | `0.005` | Learning rate |
-| `--epoch` | `5000` | Number of federated training rounds |
-| `--frac` | `0.1` | Fraction of users selected per round |
+| `--epoch` | `5000` | Number of training rounds |
+| `--frac` | `0.1` | Fraction of users selected in each round |
 | `--embedding_dim` | `16` | Dimension of user and item embeddings |
-| `--num_neg` | `1` | Negatives per positive (1:1 down-sampling) |
-| `--top_k` | `[10,20]` | Cut-offs *K* for HR@K and NDCG@K |
 | `--seed` | `608` | Random seed |
-| `--show_mode` | `write` | `print` to the terminal or `write` to `results/` |
+| `--show_mode` | `write` | `print` to the terminal or `write` to the `results` directory |
 
 </details>
 
 <details open>
-<summary><b>FRecAttack²</b></summary>
+<summary><b>Attack</b></summary>
+<br>
 
 | Argument | Symbol | Default | Description |
-|---|:---:|---|---|
-| `--mali_ratio` | – | `0.0` | Proportion of malicious users |
-| `--attack_user` | – | `NoAttack` | `NoAttack`, `IndSH`, `ColSH`, `Noisy_Col` |
-| `--Noisy_pat` | – | `ColDP` | `IndDP` or `ColDP`, used with `Noisy_Col` |
-| `--attack_item` | – | `RatingOfChange` | Velocity-based interaction sampling |
-| `--sample_size` | *n* | `50` | Number of virtual users sampled per round |
-| `--alpha` | γ | `0.1` | Proportion of items taken as hardest positive / negative samples |
-| `--sigma` | σ² | `0.1` | Variance of the Gaussian in IndSH sampling |
-| `--window_size` | *w* | `2` | Window size for computing score change velocity |
+|:---|:---:|:---|:---|
+| `--mali_ratio` | | `0.0` | Ratio of malicious users |
+| `--attack_user` | | `NoAttack` | `NoAttack`, `IndSH`, `ColSH`, `Noisy_Col` |
+| `--Noisy_pat` | | `ColDP` | `IndDP` or `ColDP`, used with `Noisy_Col` |
+| `--attack_item` | | `RatingOfChange` | Interaction sampling method |
+| `--sample_size` | *n* | `50` | Number of virtual users |
+| `--alpha` | γ | `0.1` | Proportion of items selected as hard positive (negative) samples |
+| `--sigma` | σ² | `0.1` | Variance of the normal distribution in virtual user sampling |
+| `--window_size` | *w* | `2` | Window size for velocity calculation |
 
 </details>
 
 <details open>
-<summary><b>GuardCQ</b></summary>
+<summary><b>Defence</b></summary>
+<br>
 
 | Argument | Symbol | Default | Description |
-|---|:---:|---|---|
-| `--is_detect` | – | `1` | `1` enables GuardCQ, `0` disables it |
-| `--start_detect` | – | `1` | Round from which detection starts |
-| `--wind_sz` | *w′* | `50` | Number of recent rounds used to compute contributions |
+|:---|:---:|:---|:---|
+| `--is_detect` | | `1` | `1` deploys GuardCQ, `0` does not |
+| `--start_detect` | | `1` | Round in which detection starts |
+| `--wind_sz` | *w′* | `50` | Number of recent rounds used to compute users' contributions |
 
 </details>
 
-<details>
-<summary><b>FedGNN / FedSoG only</b></summary>
+<details open>
+<summary><b>FedSoG and FedGNN</b></summary>
+<br>
 
 | Argument | Default | Description |
-|---|---|---|
-| `--clip` | `0.1` | Gradient clipping bound for LDP |
-| `--laplace_lambda` | `0.1` | Scale of the Laplace noise for LDP |
-| `--loss` | `mae` | Training loss |
+|:---|:---|:---|
+| `--clip` | `0.1` | Clipping threshold before adding Laplace noise |
+| `--laplace_lambda` | `0.1` | Scale of the Laplace noise |
+| `--loss` | `mae` | Loss function |
 | `--weight_decay` | `0.001` | Weight decay |
 | `--head_num` | `1` | Number of attention heads in GAT |
 
 </details>
 
-## 📁 Project Structure
-
-```text
-FRecAttack2/
-├── Data/                   # ML-1M, Steam-200K, Filmtrust
-├── main.py                 # Entry point
-├── parse.py                # Command-line arguments
-├── dataloader.py           # Data loading
-├── model.py                # FedNCF, FedMLP, FedSoG, FedGNN
-├── GAT.py                  # Graph attention modules for FedSoG / FedGNN
-├── server.py               # Aggregator
-├── client.py               # Benign users
-├── attack.py               # Malicious users: user sampling + interaction sampling
-├── col_server.py           # Attacker coordinating colluding malicious users
-├── defense.py              # GuardCQ
-├── utils.py                # Metrics (HR, NDCG)
-├── filename_gen.py         # Naming of result files
-├── results_analysis.py     # Result summarisation
-├── run_attack.sh           # Attack experiments
-├── run_defense.sh          # Defence experiments
-└── assets/                 # Figures used in this README
-```
-
 ## 📝 Citation
 
-If you find this work useful, please cite:
+Consider citing the paper if you use the codes in your papers, as follows:
 
 ```bibtex
 @inproceedings{hao2024notoneless,
   title     = {Not One Less: Exploring Interplay between User Profiles and Items in Untargeted Attacks against Federated Recommendation},
   author    = {Hao, Yurong and Chen, Xihui and Lyu, Xiaoting and Liu, Jiqiang and Zhu, Yongsheng and Wan, Zhiguo and Mauw, Sjouke and Wang, Wei},
-  booktitle = {Proceedings of the 2024 ACM SIGSAC Conference on Computer and Communications Security},
-  series    = {CCS '24},
+  booktitle = {Proceedings of the 2024 ACM SIGSAC Conference on Computer and Communications Security (CCS '24)},
   pages     = {2889--2903},
   year      = {2024},
   publisher = {ACM},
@@ -372,10 +348,6 @@ If you find this work useful, please cite:
 }
 ```
 
-## 🙏 Acknowledgements
-
-This research was funded in whole or in part by the Systematic Major Project of China State Railway Group Co. Ltd. (Grant P2023W002) and the Luxembourg National Research Fund (FNR, grant C21/IS/16281848, HETERS).
-
 ## 📄 License
 
-This project is released for **learning and research purposes only**.
+The project is for learning and research purposes only.
